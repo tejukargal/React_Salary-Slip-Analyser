@@ -222,28 +222,28 @@ function extractEmployeeDataFromText(text: string) {
 }
 
 function extractEmployeeData(section: string, empNo: string) {
-  const basic = extractNumber(section, /Basic\s*[:\-]?\s*([\d,]+\.?\d*)/i);
-  const da = extractNumber(section, /DA\s*[:\-]?\s*([\d,]+\.?\d*)/i);
-  const hra = extractNumber(section, /HRA\s*[:\-]?\s*([\d,]+\.?\d*)/i);
-  const sfn = extractNumber(section, /SFN\s*[:\-]?\s*([\d,]+\.?\d*)/i);
-  const spayTypist = extractNumber(section, /SPAY-TYPIST\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+  const basic = extractNumber(section, /Basic\s*[:-]?\s*([\d,]+\.?\d*)/i);
+  const da = extractNumber(section, /DA\s*[:-]?\s*([\d,]+\.?\d*)/i);
+  const hra = extractNumber(section, /HRA\s*[:-]?\s*([\d,]+\.?\d*)/i);
+  const sfn = extractNumber(section, /SFN\s*[:-]?\s*([\d,]+\.?\d*)/i);
+  const spayTypist = extractNumber(section, /SPAY-TYPIST\s*[:-]?\s*([\d,]+\.?\d*)/i);
 
-  const it = extractNumber(section, /IT\s*[:\-]?\s*([\d,]+\.?\d*)/i);
-  const pt = extractNumber(section, /PT\s*[:\-]?\s*([\d,]+\.?\d*)/i);
-  const lic = extractNumber(section, /LIC\s*[:\-]?\s*([\d,]+\.?\d*)/i);
-  const gslic = extractNumber(section, /GSLIC\s*[:\-]?\s*([\d,]+\.?\d*)/i);
-  const fbf = extractNumber(section, /FBF\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+  const it = extractNumber(section, /IT\s*[:-]?\s*([\d,]+\.?\d*)/i);
+  const pt = extractNumber(section, /PT\s*[:-]?\s*([\d,]+\.?\d*)/i);
+  const lic = extractNumber(section, /LIC\s*[:-]?\s*([\d,]+\.?\d*)/i);
+  const gslic = extractNumber(section, /GSLIC\s*[:-]?\s*([\d,]+\.?\d*)/i);
+  const fbf = extractNumber(section, /FBF\s*[:-]?\s*([\d,]+\.?\d*)/i);
 
   const grossSalary = basic + da + hra + sfn + spayTypist;
   const totalDeductions = it + pt + lic + gslic + fbf;
   const netSalary = grossSalary - totalDeductions;
 
   const employee = {
-    name: extractField(section, /Name\s*[:\-]?\s*([^\n]+)/i),
+    name: extractField(section, /Name\s*[:-]?\s*([^\n]+)/i),
     empNo: empNo,
-    designation: extractField(section, /Designation\s*[:\-]?\s*([^\n]+)/i),
-    group: extractField(section, /Group\s*[:\-]?\s*([^\n]+)/i),
-    payScale: extractField(section, /Pay\s*Scale\s*[:\-]?\s*([^\n]+)/i),
+    designation: extractField(section, /Designation\s*[:-]?\s*([^\n]+)/i),
+    group: extractField(section, /Group\s*[:-]?\s*([^\n]+)/i),
+    payScale: extractField(section, /Pay\s*Scale\s*[:-]?\s*([^\n]+)/i),
     basic,
     daysWorked: 30, // Default value
     allowances: {
@@ -261,9 +261,9 @@ function extractEmployeeData(section: string, empNo: string) {
     },
     grossSalary,
     netSalary,
-    accountNumber: extractField(section, /A\/c\s*No\s*[:\-]?\s*([^\n]+)/i),
-    bankName: extractField(section, /Bank\s*[:\-]?\s*([^\n]+)/i),
-    branchName: extractField(section, /Branch\s*[:\-]?\s*([^\n]+)/i),
+    accountNumber: extractField(section, /A\/c\s*No\s*[:-]?\s*([^\n]+)/i),
+    bankName: extractField(section, /Bank\s*[:-]?\s*([^\n]+)/i),
+    branchName: extractField(section, /Branch\s*[:-]?\s*([^\n]+)/i),
     totalLocalRecoveries: 0,
     sumOfDeductionsAndRecoveries: totalDeductions
   };
@@ -299,6 +299,6 @@ function extractYear(text: string): string {
 }
 
 function extractDepartment(text: string): string {
-  const deptMatch = text.match(/Department\s*[:\-]?\s*([^\n]+)/i);
+  const deptMatch = text.match(/Department\s*[:-]?\s*([^\n]+)/i);
   return deptMatch ? deptMatch[1].trim() : '';
 }
