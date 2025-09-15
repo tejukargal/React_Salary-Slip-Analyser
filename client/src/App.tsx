@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { PDFUploader } from './components/PDFUploader';
-import { MinimizedUploader } from './components/MinimizedUploader';
 import { EmployeeTable } from './components/EmployeeTable';
 import { Statistics } from './components/Statistics';
 import { SearchAndFilter } from './components/SearchAndFilter';
