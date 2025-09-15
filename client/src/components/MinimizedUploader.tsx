@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Employee, APIResponse } from '../types/employee';
+import { Employee } from '../types/employee';
+import { ClientPdfParser } from '../utils/clientPdfParser';
 
 interface MinimizedUploaderProps {
   onDataParsed: (employees: Employee[], summary: any) => void;
@@ -22,16 +23,12 @@ export const MinimizedUploader: React.FC<MinimizedUploaderProps> = ({ onDataPars
     setIsUploading(true);
     setError('');
 
-    const formData = new FormData();
-    formData.append('pdfFile', file);
-
     try {
-      const response = await fetch('/api/upload/pdf', {
-        method: 'POST',
-        body: formData,
-      });
+      // Parse PDF on client side
+      const pdfText = await ClientPdfParser.parsePDF(file);
 
-      const result: APIResponse = await response.json();
+      // Extract employee data from the text (reusing function from PDFUploader)
+      const result = extractEmployeeDataFromText(pdfText);
 
       if (!result.success) {
         setError(result.error || 'Failed to process PDF');
@@ -44,9 +41,9 @@ export const MinimizedUploader: React.FC<MinimizedUploaderProps> = ({ onDataPars
       }
 
     } catch (err) {
-      setError('Network error: Failed to upload PDF');
+      setError('Failed to process PDF file');
       setTimeout(() => setError(''), 5000);
-      console.error('Upload error:', err);
+      console.error('PDF processing error:', err);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -111,3 +108,133 @@ export const MinimizedUploader: React.FC<MinimizedUploaderProps> = ({ onDataPars
     </div>
   );
 };
+
+// Copy helper functions from PDFUploader
+function extractEmployeeDataFromText(text: string) {
+  const employees = [];
+
+  // Simple employee extraction based on common patterns
+  const employeeSections = text.split(/EMP\s*No\s*[\s\n]*(\d+)/i);
+
+  for (let i = 1; i < employeeSections.length; i++) {
+    const section = employeeSections[i];
+    const empNoMatch = section.match(/(\d+)/);
+    if (!empNoMatch) continue;
+
+    const empNo = empNoMatch[1];
+    const employee = extractEmployeeData(section, empNo);
+    if (employee) {
+      employees.push(employee);
+    }
+  }
+
+  if (employees.length === 0) {
+    return {
+      success: false,
+      error: 'No employee data found in the PDF',
+      warning: undefined,
+      data: undefined,
+      summary: undefined
+    };
+  }
+
+  const summary = {
+    totalEmployees: employees.length,
+    month: extractMonth(text),
+    year: extractYear(text),
+    department: extractDepartment(text),
+    processingDate: new Date().toISOString()
+  };
+
+  return {
+    success: true,
+    data: {
+      employees,
+      ...summary
+    },
+    summary,
+    warning: undefined
+  };
+}
+
+function extractEmployeeData(section: string, empNo: string) {
+  const basic = extractNumber(section, /Basic\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+  const da = extractNumber(section, /DA\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+  const hra = extractNumber(section, /HRA\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+  const sfn = extractNumber(section, /SFN\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+  const spayTypist = extractNumber(section, /SPAY-TYPIST\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+
+  const it = extractNumber(section, /IT\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+  const pt = extractNumber(section, /PT\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+  const lic = extractNumber(section, /LIC\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+  const gslic = extractNumber(section, /GSLIC\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+  const fbf = extractNumber(section, /FBF\s*[:\-]?\s*([\d,]+\.?\d*)/i);
+
+  const grossSalary = basic + da + hra + sfn + spayTypist;
+  const totalDeductions = it + pt + lic + gslic + fbf;
+  const netSalary = grossSalary - totalDeductions;
+
+  const employee = {
+    name: extractField(section, /Name\s*[:\-]?\s*([^\n]+)/i),
+    empNo: empNo,
+    designation: extractField(section, /Designation\s*[:\-]?\s*([^\n]+)/i),
+    group: extractField(section, /Group\s*[:\-]?\s*([^\n]+)/i),
+    payScale: extractField(section, /Pay\s*Scale\s*[:\-]?\s*([^\n]+)/i),
+    basic,
+    daysWorked: 30, // Default value
+    allowances: {
+      da,
+      hra,
+      sfn,
+      spayTypist
+    },
+    deductions: {
+      it,
+      pt,
+      lic,
+      gslic,
+      fbf
+    },
+    grossSalary,
+    netSalary,
+    accountNumber: extractField(section, /A\/c\s*No\s*[:\-]?\s*([^\n]+)/i),
+    bankName: extractField(section, /Bank\s*[:\-]?\s*([^\n]+)/i),
+    branchName: extractField(section, /Branch\s*[:\-]?\s*([^\n]+)/i),
+    totalLocalRecoveries: 0,
+    sumOfDeductionsAndRecoveries: totalDeductions
+  };
+
+  return employee;
+}
+
+function extractField(text: string, regex: RegExp): string {
+  const match = text.match(regex);
+  return match ? match[1].trim() : '';
+}
+
+function extractNumber(text: string, regex: RegExp): number {
+  const match = text.match(regex);
+  return match ? parseFloat(match[1].replace(/,/g, '')) : 0;
+}
+
+function extractMonth(text: string): string {
+  const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+
+  for (const month of months) {
+    if (text.toLowerCase().includes(month.toLowerCase())) {
+      return month;
+    }
+  }
+  return '';
+}
+
+function extractYear(text: string): string {
+  const yearMatch = text.match(/\b(20\d{2})\b/);
+  return yearMatch ? yearMatch[1] : '';
+}
+
+function extractDepartment(text: string): string {
+  const deptMatch = text.match(/Department\s*[:\-]?\s*([^\n]+)/i);
+  return deptMatch ? deptMatch[1].trim() : '';
+}

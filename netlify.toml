@@ -1,19 +1,9 @@
 [build]
-  command = "cd server && npm install && cd .. && cd client && npm install && cd .. && npm run client:build"
+  command = "cd client && npm install && npm run build"
   publish = "client/build"
 
 [build.environment]
   NODE_VERSION = "18"
-
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
-  external_node_modules = ["pdf-parse"]
-
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
 
 [[redirects]]
   from = "/*"
